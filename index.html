@@ -60,6 +60,20 @@
   .tip b{color:#F4A96B} .tip .dm{color:#C9BCa6; font-size:11.5px; display:block; margin-top:3px}
   .legend{display:flex; flex-wrap:wrap; gap:10px 15px; margin:12px 2px 0; font-size:11.5px; color:var(--muted)}
   .legend .lk{display:inline-flex; align-items:center; gap:6px} .legend .sw{width:11px;height:11px;border-radius:3px;flex:none} .legend .sw.dot{border-radius:50%}
+  .readbar{display:flex; gap:16px; align-items:stretch; flex-wrap:wrap; background:var(--card); border:1px solid var(--line); box-shadow:var(--shadow); border-radius:14px; padding:12px 14px; margin:16px 0 20px}
+  .readbar .snap{display:flex; gap:8px; margin:0; flex:none}
+  .readbar .stat{min-width:82px; padding:8px 10px}
+  .readbar .toplist{display:flex; gap:8px; flex:1; flex-wrap:wrap; min-width:260px; margin:0}
+  .readbar .tl{border:1px solid var(--line); border-bottom:1px solid var(--line); border-radius:10px; padding:8px 11px; flex:1 1 150px}
+  .readbar .tl:hover{background:var(--card-2); border-color:var(--faint)}
+  .vhead{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:4px 2px 8px; flex-wrap:wrap}
+  .vhead .ve{font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--accent-ink); font-weight:700}
+  .vhead .vs{font-size:12px; color:var(--muted)}
+  .viewport{width:100%; height:min(80vh,900px); min-height:560px}
+  .matrixwrap{border-radius:16px; border:1px solid var(--line); box-shadow:var(--shadow); background:var(--card); overflow:auto; position:relative}
+  .matrixwrap::before,.matrixwrap::after{content:""; position:absolute; width:17px; height:17px; z-index:2; pointer-events:none; border:2px solid var(--accent); opacity:.7}
+  .matrixwrap::before{top:11px; left:11px; border-right:0; border-bottom:0}
+  .matrixwrap::after{bottom:11px; right:11px; border-left:0; border-top:0}
 
   .rail .panel{background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); overflow:hidden}
   .rail .ph{background:var(--ink); color:var(--card); padding:12px 15px}
@@ -141,33 +155,28 @@
       <div class="eyebrow">Analysis</div>
       <h1>Role Overlap &amp; Interaction Map</h1>
       <p class="lede">See the tangle, then act on it. The map shows where roles concentrate and collide; the findings below turn that into plain conclusions and concrete moves. Click any node for its own breakdown.</p>
-      <div class="switch"><button data-view="neural" class="on">Neural Web<span class="n">3D</span></button><button data-view="matrix">Overlap Matrix</button></div>
     </div>
 
-    <div class="stage">
-      <div>
-        <div class="canvaswrap dark" id="stageBox">
-          <canvas id="neuralCanvas"></canvas>
-          <div class="svgwrap hidev" id="svgHost"></div>
-          <div class="hint" id="hint">Drag a node to pull it out · drag the space to rotate · scroll to zoom · click to inspect</div>
-          <div class="tip" id="tip"></div>
-        </div>
-        <div class="legend" id="legend"></div>
+    <div class="readbar">
+      <div class="snap">
+        <div class="stat"><div class="n hot" id="sConc">—</div><div class="l">1-person KPIs</div></div>
+        <div class="stat"><div class="n hot" id="sHot">—</div><div class="l">Overlap hotspots</div></div>
+        <div class="stat"><div class="n" id="sGap">—</div><div class="l">Structural gaps</div></div>
       </div>
-      <aside class="rail">
-        <div class="panel"><div class="ph"><div class="k">The read</div><div class="t">What stands out</div></div>
-          <div class="pb">
-            <div class="snap">
-              <div class="stat"><div class="n hot" id="sConc">—</div><div class="l">1-person KPIs</div></div>
-              <div class="stat"><div class="n hot" id="sHot">—</div><div class="l">Overlap hotspots</div></div>
-              <div class="stat"><div class="n" id="sGap">—</div><div class="l">Structural gaps</div></div>
-            </div>
-            <div class="toplist" id="toplist"></div>
-            <p class="railnote">Ranked most-severe first. Click one to jump to it — or click any node in the map.</p>
-          </div>
-        </div>
-      </aside>
+      <div class="toplist" id="toplist"></div>
     </div>
+
+    <div class="vhead"><span class="ve">Neural Web · people ↔ domains</span><span class="vs">Drag a node to pull it out · drag the space to rotate · scroll to zoom · click to inspect</span></div>
+    <div class="canvaswrap dark viewport" id="stageBox">
+      <canvas id="neuralCanvas"></canvas>
+      <div class="hint" id="hint">Live · auto-rotating until you touch it</div>
+      <div class="tip" id="tip"></div>
+    </div>
+    <div class="legend" id="legend"></div>
+
+    <div class="vhead" style="margin-top:24px"><span class="ve">Overlap Matrix · people × domains</span><span class="vs">Hot columns are the overlaps · empty columns with no owner are the gaps</span></div>
+    <div class="matrixwrap viewport" id="matrixWrap"><div id="svgHost"></div></div>
+    <div class="legend" id="legendM"></div>
 
     <div class="section-h"><div class="e">Findings &amp; moves</div><h2>What the map is telling us</h2><p>Each finding: the conclusion, the evidence behind it, why it matters, and the moves to make. Check moves off as you decide them.</p></div>
     <div class="findings" id="findings"></div>
@@ -339,7 +348,7 @@
   function project(n){var cy=Math.cos(rotY),sy=Math.sin(rotY),cx=Math.cos(rotX),sx=Math.sin(rotX);var x1=n.x*cy-n.z*sy,z1=n.x*sy+n.z*cy,y1=n.y*cx-z1*sx,z2=n.y*sx+z1*cx,persp=420/(420+z2)*zoom;return {sx:x1*persp,sy:y1*persp,s:persp,z:z2};}
   function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
   function ambient(W,H){ctx.save();ctx.fillStyle="rgba(247,106,22,.05)";for(var x=20;x<W;x+=30){for(var y=20;y<H;y+=30){ctx.beginPath();ctx.arc(x,y,1,0,7);ctx.fill();}}ctx.restore();}
-  function fit(W,H){var maxR=0;nodes.forEach(function(n){var d=Math.sqrt(n.x*n.x+n.y*n.y+n.z*n.z);if(d>maxR)maxR=d;});zoom=Math.max(0.5,Math.min(1.6,(0.34*Math.min(W,H))/(maxR||1)));}
+  function fit(W,H){var maxR=0;nodes.forEach(function(n){var d=Math.sqrt(n.x*n.x+n.y*n.y+n.z*n.z);if(d>maxR)maxR=d;});zoom=Math.max(0.45,Math.min(1.5,(0.30*Math.min(W,H))/(maxR||1)));}
   function draw(){var W=cv.clientWidth,H=cv.clientHeight;if(cv.width!==W*DPR){cv.width=W*DPR;cv.height=H*DPR;}ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,W,H);
     if(!fitted&&W>0){fit(W,H);fitted=true;} var cxp=W/2,cyp=H/2; ambient(W,H);
     var pr=nodes.map(function(n){return {n:n,p:project(n)};});var hi=hoverNode||dragNode;var nb={};if(hi){links.forEach(function(l){if(nodes[l[0]]===hi)nb[l[1]]=1;if(nodes[l[1]]===hi)nb[l[0]]=1;});}
@@ -361,7 +370,7 @@
   window.addEventListener("mousemove",function(e){
     if(dragNode){var dx=e.clientX-lastX,dy=e.clientY-lastY;if(dx||dy)moved=true;var s=(project(dragNode).s*zoom)||1,cy=Math.cos(rotY),sy=Math.sin(rotY),cx=Math.cos(rotX),sx=Math.sin(rotX);dragNode.x+=(dx*cy-dy*sx*sy)/s;dragNode.y+=(dy*cx)/s;dragNode.z+=(-dx*sy-dy*sx*cy)/s;lastX=e.clientX;lastY=e.clientY;return;}
     if(dragR){var ax=e.clientX-lastX,ay=e.clientY-lastY;if(ax||ay)moved=true;rotY+=ax*0.008;rotX+=ay*0.008;rotX=Math.max(-1.4,Math.min(1.4,rotX));lastX=e.clientX;lastY=e.clientY;return;}
-    if(view!=="neural")return;var r=cv.getBoundingClientRect();hoverNode=pick(e.clientX-r.left,e.clientY-r.top);var tip=document.getElementById("tip");
+    var r=cv.getBoundingClientRect();hoverNode=pick(e.clientX-r.left,e.clientY-r.top);var tip=document.getElementById("tip");
     if(hoverNode){var o=cv._pr.filter(function(z){return z.n===hoverNode;})[0];tip.style.opacity=1;tip.style.left=Math.min(r.width-240,o._sx+12)+"px";tip.style.top=(o._sy+12)+"px";if(hoverNode.type==="p"){tip.innerHTML='<b>'+esc(hoverNode.label)+'</b><span class="dm">'+hoverNode.ref.seats.length+' seats · '+pLoad(hoverNode.ref)+' domains'+(hoverNode.ref.metrics?' · '+hoverNode.ref.metrics+' KPI':'')+'</span>';}else{tip.innerHTML='<b>'+esc(hoverNode.label)+'</b><span class="dm">'+domPeople[hoverNode.did].length+' people share this</span>';}cv.style.cursor="grab";}else{tip.style.opacity=0;cv.style.cursor="grab";}});
   cv.addEventListener("click",function(e){if(moved){moved=false;return;}var r=cv.getBoundingClientRect();var n=pick(e.clientX-r.left,e.clientY-r.top);if(n)openDrawer(n.type==="p"?"person":"domain",n.type==="p"?n.ref.name:n.did);});
   cv.addEventListener("wheel",function(e){e.preventDefault();zoom*=e.deltaY>0?0.92:1.08;zoom=Math.max(0.4,Math.min(3,zoom));},{passive:false});
@@ -370,30 +379,23 @@
   /* ===== MATRIX ===== */
   function renderMatrix(){
     var host=document.getElementById("svgHost"),doms=DOMAINS;
-    var html='<div style="padding:16px 18px"><table style="border-collapse:collapse;width:100%;font-family:var(--sans)"><tr><th style="text-align:left;padding:6px 8px"></th>';
-    doms.forEach(function(d){var c=domPeople[d.id].length;html+='<th data-drawer="domain" data-k="'+d.id+'" style="cursor:pointer;padding:6px 4px;vertical-align:bottom"><div style="writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;margin:0 auto 5px;font-size:10.5px;color:var(--ink-soft);font-weight:700">'+esc(d.name)+'</div><div style="font-family:var(--mono);font-size:11px;font-weight:700;color:'+(c>=5?'var(--crit)':c>=3?'var(--warn)':'var(--muted)')+'">'+c+'</div></th>';});
-    html+='<th style="font-size:10.5px;color:var(--muted);padding:0 6px">KPIs</th></tr>';
+    var html='<div style="padding:30px 26px;min-height:100%;display:flex;align-items:center;justify-content:center"><table style="border-collapse:collapse;width:100%;max-width:1080px;font-family:var(--sans)"><tr><th style="text-align:left;padding:8px 10px"></th>';
+    doms.forEach(function(d){var c=domPeople[d.id].length;html+='<th data-drawer="domain" data-k="'+d.id+'" style="cursor:pointer;padding:8px 6px;vertical-align:bottom"><div style="writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;margin:0 auto 7px;font-size:12px;color:var(--ink-soft);font-weight:700">'+esc(d.name)+'</div><div style="font-family:var(--mono);font-size:13px;font-weight:700;color:'+(c>=5?'var(--crit)':c>=3?'var(--warn)':'var(--muted)')+'">'+c+'</div></th>';});
+    html+='<th style="font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--muted);padding:0 8px">KPIs</th></tr>';
     PEOPLE.slice().sort(function(a,b){return pLoad(b)-pLoad(a);}).forEach(function(p){
-      html+='<tr><td data-drawer="person" data-k="'+esc(p.name)+'" style="cursor:pointer;padding:5px 8px;font-size:12.5px;font-weight:600;white-space:nowrap;border-top:1px solid var(--line-soft)">'+esc(p.name)+'</td>';
-      doms.forEach(function(d){var on=p.d.indexOf(d.id)>=0,c=domPeople[d.id].length,col=on?hexA(DCOL[d.id],c>=5?0.9:c>=3?0.6:0.32):"transparent";html+='<td data-drawer="domain" data-k="'+d.id+'" style="cursor:pointer;border-top:1px solid var(--line-soft);text-align:center;padding:5px 4px"><span style="display:inline-block;width:18px;height:18px;border-radius:5px;background:'+col+'"></span></td>';});
-      html+='<td style="text-align:center;border-top:1px solid var(--line-soft);font-family:var(--mono);font-size:12px;font-weight:700;color:'+(p.metrics>=5?'var(--crit)':'var(--muted)')+'">'+(p.metrics||"·")+'</td></tr>';});
+      html+='<tr><td data-drawer="person" data-k="'+esc(p.name)+'" style="cursor:pointer;padding:9px 12px;font-size:15px;font-weight:600;white-space:nowrap;border-top:1px solid var(--line-soft)">'+esc(p.name)+'</td>';
+      doms.forEach(function(d){var on=p.d.indexOf(d.id)>=0,c=domPeople[d.id].length,col=on?hexA(DCOL[d.id],c>=5?0.92:c>=3?0.62:0.34):"transparent";html+='<td data-drawer="domain" data-k="'+d.id+'" style="cursor:pointer;border-top:1px solid var(--line-soft);text-align:center;padding:8px 6px"><span style="display:inline-block;width:26px;height:26px;border-radius:7px;background:'+col+'"></span></td>';});
+      html+='<td style="text-align:center;border-top:1px solid var(--line-soft);font-family:var(--mono);font-size:15px;font-weight:700;color:'+(p.metrics>=5?'var(--crit)':'var(--muted)')+'">'+(p.metrics||"·")+'</td></tr>';});
     html+='</table></div>';host.innerHTML=html;
   }
 
-  function renderLegend(){var el=document.getElementById("legend");
-    if(view==="neural"){el.innerHTML='<span class="lk"><span class="sw dot" style="background:var(--crit)"></span>Overloaded (4+ domains)</span><span class="lk"><span class="sw dot" style="background:var(--good)"></span>Focused</span>'+DOMAINS.map(function(d){return '<span class="lk"><span class="sw" style="background:'+DCOL[d.id]+'"></span>'+esc(d.name)+'</span>';}).join("");}
-    else{el.innerHTML='<span class="lk">Filled cell = person owns work in that domain · deeper column = heavier overlap · bold count (5+) is a hotspot · empty column with no owner is a gap · KPI column = scorecard concentration.</span>';}}
-
-  var view="neural";
-  function setView(v){view=v;document.querySelectorAll(".switch button").forEach(function(b){b.classList.toggle("on",b.dataset.view===v);});
-    var box=document.getElementById("stageBox"),svg=document.getElementById("svgHost"),can=document.getElementById("neuralCanvas"),hint=document.getElementById("hint");
-    if(v==="neural"){box.classList.add("dark");can.classList.remove("hidev");svg.classList.add("hidev");hint.style.display="";if(!raf)loop();}
-    else{box.classList.remove("dark");can.classList.add("hidev");svg.classList.remove("hidev");hint.style.display="none";if(raf){cancelAnimationFrame(raf);raf=null;}renderMatrix();}
-    renderLegend();}
+  function renderLegend(){
+    document.getElementById("legend").innerHTML='<span class="lk"><span class="sw dot" style="background:#B5432E"></span>Overloaded (4+ domains)</span><span class="lk"><span class="sw dot" style="background:#2FA98C"></span>Focused</span>'+DOMAINS.map(function(d){return '<span class="lk"><span class="sw" style="background:'+DCOL[d.id]+'"></span>'+esc(d.name)+'</span>';}).join("");
+    document.getElementById("legendM").innerHTML='<span class="lk">Filled cell = person owns work in that domain · deeper column = heavier overlap · bold count (5+) is a hotspot · empty column with no owner is a gap · KPI column = scorecard concentration.</span>';
+  }
 
   /* ===== events ===== */
   document.addEventListener("click",function(e){
-    var sw=e.target.closest(".switch button"); if(sw){setView(sw.dataset.view);return;}
     var dr=e.target.closest("[data-drawer]"); if(dr){openDrawer(dr.dataset.drawer,dr.dataset.k);return;}
     var jump=e.target.closest("[data-jump]"); if(jump){closeDrawer();var el=document.getElementById(jump.dataset.jump);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.style.transition="box-shadow .3s";el.style.boxShadow="0 0 0 3px var(--accent-soft), var(--shadow)";setTimeout(function(){el.style.boxShadow="";},1400);}return;}
     var mv=e.target.closest(".move"); if(mv){var k=mKey(+mv.dataset.move,+mv.dataset.mi);st.moves[k]=!st.moves[k];save();renderFindings();return;}
@@ -403,8 +405,7 @@
   document.addEventListener("keydown",function(e){if(e.key==="Escape")closeDrawer();});
 
   /* init */
-  buildGraph();settle();renderRail();renderFindings();renderPlan();
-  var initV=(location.hash||"").replace("#","");setView(initV==="matrix"?"matrix":"neural");
+  buildGraph();settle();renderRail();renderFindings();renderPlan();renderMatrix();renderLegend();loop();
 })();
 </script>
 </body>
