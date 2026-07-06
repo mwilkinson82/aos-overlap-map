@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>G&M V2 — Role Overlap & Interaction Map</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F7F2EA; --card:#F8F4ED; --card-2:#ECE5D8;
+    --ink:#1C1A17; --ink-soft:#3A3833; --muted:#6B655D; --faint:#B4AD9F;
+    --line:#DCD5C8; --line-soft:#E6DFD2;
+    --accent:#F76A16; --accent-ink:#C2540E; --accent-soft:#F7EDE0;
+    --crit:#B5432E; --crit-bg:#F3E0D9; --warn:#9A6A00; --warn-bg:#F1E8D2; --good:#2FA98C; --good-bg:#E1F0EA;
+    --dark:#171310; --dark-line:#3A322A;
+    --shadow:0 1px 0 var(--line), 0 8px 22px rgba(28,26,23,.06);
+    --serif:"Instrument Serif",ui-serif,Georgia,serif;
+    --sans:"Helvetica Neue",Helvetica,Arial,"Liberation Sans",ui-sans-serif,system-ui;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0}
+  .wrap{font-family:var(--sans); color:var(--ink); background:var(--paper); -webkit-font-smoothing:antialiased; line-height:1.5; min-height:100vh; overflow-x:hidden; padding-bottom:44px}
+  .container{max-width:1240px; margin:0 auto; padding:0 24px}
+  .topbar{display:flex; align-items:center; gap:14px; padding:13px 24px; border-bottom:1px solid var(--line); background:var(--card-2)}
+  .logo{display:flex; align-items:center; gap:9px}
+  .logo .mk{width:29px; height:29px; border-radius:50%; background:var(--ink); color:var(--paper); font-family:var(--serif); font-weight:700; font-size:11px; display:flex; align-items:center; justify-content:center}
+  .logo .mk::before{content:"AOS"}
+  .logo .wm{font-family:var(--serif); font-weight:700; font-size:17px}
+  .logo .sc{font-size:10px; letter-spacing:.16em; color:var(--muted); text-transform:uppercase; margin-left:12px; border-left:1px solid var(--line); padding-left:12px}
+  .topbar .spacer{flex:1}
+  .proj{font-size:13px; font-weight:600; color:var(--ink-soft); background:var(--card); border:1px solid var(--line); border-radius:8px; padding:5px 11px}
+  .who{font-size:13px; color:var(--muted)}
+
+  .head{padding:22px 0 0}
+  .eyebrow{font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--accent-ink); font-weight:700}
+  h1{font-family:var(--serif); font-weight:700; font-size:30px; margin:6px 0 0; text-wrap:balance}
+  .lede{color:var(--ink-soft); font-size:14.5px; margin:8px 0 0; max-width:78ch}
+  .switch{display:inline-flex; background:var(--card-2); border:1px solid var(--line); border-radius:11px; padding:4px; gap:3px; margin:18px 0 4px}
+  .switch button{font-family:var(--sans); border:0; background:none; cursor:pointer; font-size:13.5px; font-weight:600; color:var(--muted); padding:8px 16px; border-radius:8px}
+  .switch button.on{background:var(--card); color:var(--ink); box-shadow:var(--shadow)}
+  .switch .n{font-family:var(--mono); font-size:10px; opacity:.6; margin-left:5px}
+
+  .stage{display:grid; grid-template-columns:1fr 300px; gap:20px; margin-top:14px; align-items:start}
+  @media (max-width:940px){ .stage{grid-template-columns:1fr} }
+  .canvaswrap{position:relative; border-radius:16px; overflow:hidden; border:1px solid var(--line); box-shadow:var(--shadow); min-height:520px; height:62vh; background:var(--card)}
+  .canvaswrap.dark{background:radial-gradient(120% 120% at 50% 28%, #241d15 0%, var(--dark) 72%); border-color:var(--dark-line)}
+  .canvaswrap::before,.canvaswrap::after{content:""; position:absolute; width:17px; height:17px; z-index:4; pointer-events:none; border:2px solid var(--accent); opacity:.85}
+  .canvaswrap::before{top:11px; left:11px; border-right:0; border-bottom:0}
+  .canvaswrap::after{bottom:11px; right:11px; border-left:0; border-top:0}
+  #neuralCanvas{display:block; width:100%; height:100%; cursor:grab}
+  #neuralCanvas:active{cursor:grabbing}
+  .hint{position:absolute; left:14px; bottom:12px; font-size:11.5px; color:#B9AE99; background:rgba(25,21,16,.5); padding:5px 10px; border-radius:20px; pointer-events:none}
+  .svgwrap{width:100%; height:100%; overflow:auto}
+  .tip{position:absolute; pointer-events:none; background:#211a13; color:#F1E9DA; border:1px solid var(--dark-line); border-radius:8px; padding:8px 11px; font-size:12.5px; max-width:230px; opacity:0; transition:opacity .1s; z-index:5}
+  .tip b{color:#F4A96B} .tip .dm{color:#C9BCa6; font-size:11.5px; display:block; margin-top:3px}
+  .legend{display:flex; flex-wrap:wrap; gap:10px 15px; margin:12px 2px 0; font-size:11.5px; color:var(--muted)}
+  .legend .lk{display:inline-flex; align-items:center; gap:6px} .legend .sw{width:11px;height:11px;border-radius:3px;flex:none} .legend .sw.dot{border-radius:50%}
+
+  .rail .panel{background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); overflow:hidden}
+  .rail .ph{background:var(--ink); color:var(--card); padding:12px 15px}
+  .ph .k{font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); font-weight:700}
+  .ph .t{font-family:var(--serif); font-size:18px; font-weight:400; margin-top:1px; color:var(--card)}
+  .pb{padding:13px 15px}
+  .snap{display:flex; gap:8px; margin-bottom:4px}
+  .stat{flex:1; background:var(--card-2); border:1px solid var(--line-soft); border-radius:9px; padding:8px 5px; text-align:center}
+  .stat .n{font-family:var(--serif); font-size:20px; font-weight:700; line-height:1; font-variant-numeric:tabular-nums} .stat .n.hot{color:var(--crit)}
+  .stat .l{font-size:9px; letter-spacing:.02em; text-transform:uppercase; color:var(--muted); margin-top:5px; font-weight:600}
+  .toplist{margin-top:6px}
+  .tl{display:flex; gap:9px; align-items:flex-start; padding:9px 8px; border-radius:9px; cursor:pointer; border-bottom:1px solid var(--line-soft)}
+  .tl:last-child{border-bottom:0} .tl:hover{background:var(--card-2)}
+  .tl .sev{width:9px; height:9px; border-radius:50%; margin-top:4px; flex:none}
+  .sev.crit{background:var(--crit)} .sev.warn{background:var(--warn)} .sev.gap{background:var(--faint)}
+  .tl .tt{font-size:12.5px; font-weight:600; line-height:1.35} .tl .ts{font-size:11.5px; color:var(--muted)}
+  .railnote{font-size:11.5px; color:var(--muted); margin-top:10px; font-style:italic}
+
+  /* findings */
+  .section-h{margin:34px 0 4px} .section-h .e{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); font-weight:700}
+  .section-h h2{font-family:var(--serif); font-size:24px; font-weight:700; margin:5px 0 0} .section-h p{color:var(--muted); font-size:13.5px; margin:5px 0 0}
+  .findings{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px}
+  @media (max-width:860px){ .findings{grid-template-columns:1fr} }
+  .finding{background:var(--card); border:1px solid var(--line); border-radius:13px; box-shadow:var(--shadow); padding:18px 19px; scroll-margin-top:16px; border-top:4px solid var(--faint)}
+  .finding.crit{border-top-color:var(--crit)} .finding.warn{border-top-color:var(--warn)} .finding.gap{border-top-color:var(--accent)}
+  .finding .fsev{display:inline-flex; align-items:center; gap:6px; font-size:10.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:2px 8px; border-radius:20px; margin-bottom:9px}
+  .fsev.crit{color:var(--crit); background:var(--crit-bg)} .fsev.warn{color:var(--warn); background:var(--warn-bg)} .fsev.gap{color:var(--accent-ink); background:var(--accent-soft)}
+  .finding h3{font-family:var(--serif); font-size:19px; font-weight:700; margin:0 0 8px; line-height:1.2}
+  .finding .ev{background:var(--card-2); border:1px solid var(--line-soft); border-radius:9px; padding:9px 12px; font-size:12.5px; color:var(--ink-soft); margin-bottom:10px; display:flex; flex-wrap:wrap; gap:6px 14px}
+  .finding .ev .m{display:inline-flex; align-items:baseline; gap:5px} .finding .ev .m b{font-family:var(--mono); font-size:14px; color:var(--crit)}
+  .finding .why{font-size:13.5px; color:var(--ink-soft); margin:0 0 12px; line-height:1.5}
+  .movelbl{font-size:10.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); font-weight:700; margin-bottom:8px}
+  .move{display:flex; gap:9px; align-items:flex-start; font-size:13px; line-height:1.4; margin-bottom:8px; cursor:pointer}
+  .move .ck{flex:none; width:17px; height:17px; border:1.6px solid var(--faint); border-radius:5px; margin-top:1px; display:flex; align-items:center; justify-content:center; background:var(--card)}
+  .move.on .ck{background:var(--good); border-color:var(--good)} .move .ck svg{opacity:0;color:#fff;width:11px;height:11px} .move.on .ck svg{opacity:1}
+  .move.on .mt{color:var(--muted); text-decoration:line-through}
+  .move .when{font-size:10px; font-weight:700; color:var(--accent-ink); background:var(--accent-soft); border-radius:5px; padding:1px 6px; margin-left:auto; flex:none; white-space:nowrap; letter-spacing:.02em}
+
+  /* plan */
+  .plan{margin-top:18px; background:var(--card); border:1px solid var(--line); border-radius:13px; box-shadow:var(--shadow); overflow:hidden}
+  .plan .ph2{background:var(--ink); color:var(--paper); padding:14px 20px} .plan .ph2 .t{font-family:var(--serif); font-size:20px; font-weight:700} .plan .ph2 .s{font-size:12.5px; color:#C9BCA6; margin-top:2px}
+  .plan .pcols{display:grid; grid-template-columns:repeat(3,1fr); gap:0}
+  @media (max-width:760px){ .plan .pcols{grid-template-columns:1fr} }
+  .pcol{padding:16px 18px; border-right:1px solid var(--line-soft)} .pcol:last-child{border-right:0}
+  .pcol .ch{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent-ink); font-weight:700; margin-bottom:10px}
+  .pcol .pi{font-size:13px; color:var(--ink-soft); line-height:1.4; margin-bottom:9px; padding-left:15px; position:relative}
+  .pcol .pi::before{content:"→"; position:absolute; left:0; color:var(--accent)}
+
+  /* drawer */
+  .scrim{position:fixed; inset:0; background:rgba(25,21,16,.34); opacity:0; pointer-events:none; transition:opacity .18s; z-index:40}
+  .scrim.on{opacity:1; pointer-events:auto}
+  .drawer{position:fixed; top:0; right:0; height:100%; width:392px; max-width:92vw; background:var(--paper); border-left:1px solid var(--line); box-shadow:-16px 0 40px rgba(33,30,23,.16); transform:translateX(100%); transition:transform .22s ease; z-index:41; display:flex; flex-direction:column}
+  .drawer.on{transform:translateX(0)}
+  .dh{background:var(--ink); color:var(--card); padding:16px 20px; display:flex; justify-content:space-between; align-items:flex-start; gap:10px}
+  .dh .k{font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); font-weight:700}
+  .dh .t{font-family:var(--serif); font-size:23px; font-weight:400; margin-top:2px; line-height:1.15; color:var(--card)}
+  .dh .x{background:rgba(255,255,255,.16); border:0; color:#fff; width:30px; height:30px; border-radius:8px; cursor:pointer; font-size:18px; flex:none}
+  .db{padding:16px 20px; overflow-y:auto}
+  .db .chips{display:flex; flex-wrap:wrap; gap:5px; margin:8px 0 14px}
+  .db .chip{font-size:11.5px; padding:3px 9px; border-radius:20px; font-weight:600}
+  .db .kv{font-size:13px; color:var(--ink-soft); margin-bottom:12px}
+  .db .fref{border:1px solid var(--line); border-radius:10px; padding:11px 13px; margin-bottom:10px; background:var(--card); cursor:pointer; border-left:4px solid var(--faint)}
+  .db .fref.crit{border-left-color:var(--crit)} .db .fref.warn{border-left-color:var(--warn)} .db .fref.gap{border-left-color:var(--accent)}
+  .db .fref .ft{font-weight:700; font-size:13.5px; margin-bottom:3px} .db .fref .fm{font-size:12.5px; color:var(--ink-soft); line-height:1.4}
+  .db textarea{width:100%; font-family:var(--sans); font-size:12.5px; border:1px solid var(--line); border-radius:9px; padding:9px; min-height:60px; background:var(--card); color:var(--ink); resize:vertical; margin-top:4px}
+  .db .lbl{font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:700; margin:6px 0 6px}
+  .foot{color:var(--muted); font-size:12px; text-align:center; margin-top:30px; line-height:1.6}
+  .hidev{display:none !important}
+  h1,h2,h3,.stat .n,.ph .t,.dh .t,.plan .ph2 .t,.finding h3,.section-h h2{font-weight:400}
+  .eyebrow,.section-h .e,.ph .k,.dh .k,.stat .l,.movelbl,.db .lbl,.finding .fsev,.move .when,.tl .ts{font-family:var(--mono)}
+  .eyebrow,.section-h .e{letter-spacing:.18em}
+</style>
+
+<div class="wrap">
+  <div class="topbar"><div class="logo"><span class="mk"></span><span class="wm">AOS.</span><span class="sc">ALP Operating System</span></div>
+    <span class="spacer"></span><span class="proj">G&amp;M V2</span><span class="who">Marshall</span></div>
+  <div class="container">
+    <div class="head">
+      <div class="eyebrow">Analysis</div>
+      <h1>Role Overlap &amp; Interaction Map</h1>
+      <p class="lede">See the tangle, then act on it. The map shows where roles concentrate and collide; the findings below turn that into plain conclusions and concrete moves. Click any node for its own breakdown.</p>
+      <div class="switch"><button data-view="neural" class="on">Neural Web<span class="n">3D</span></button><button data-view="matrix">Overlap Matrix</button></div>
+    </div>
+
+    <div class="stage">
+      <div>
+        <div class="canvaswrap dark" id="stageBox">
+          <canvas id="neuralCanvas"></canvas>
+          <div class="svgwrap hidev" id="svgHost"></div>
+          <div class="hint" id="hint">Drag a node to pull it out · drag the space to rotate · scroll to zoom · click to inspect</div>
+          <div class="tip" id="tip"></div>
+        </div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <aside class="rail">
+        <div class="panel"><div class="ph"><div class="k">The read</div><div class="t">What stands out</div></div>
+          <div class="pb">
+            <div class="snap">
+              <div class="stat"><div class="n hot" id="sConc">—</div><div class="l">1-person KPIs</div></div>
+              <div class="stat"><div class="n hot" id="sHot">—</div><div class="l">Overlap hotspots</div></div>
+              <div class="stat"><div class="n" id="sGap">—</div><div class="l">Structural gaps</div></div>
+            </div>
+            <div class="toplist" id="toplist"></div>
+            <p class="railnote">Ranked most-severe first. Click one to jump to it — or click any node in the map.</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="section-h"><div class="e">Findings &amp; moves</div><h2>What the map is telling us</h2><p>Each finding: the conclusion, the evidence behind it, why it matters, and the moves to make. Check moves off as you decide them.</p></div>
+    <div class="findings" id="findings"></div>
+
+    <div class="plan" id="plan"></div>
+
+    <p class="foot">Role Overlap &amp; Interaction Map · ALP Operating System · built on live G&amp;M V2 data · your checks &amp; notes save in this browser</p>
+  </div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="drawer" id="drawer"><div class="dh"><div><div class="k" id="drK">Breakdown</div><div class="t" id="drT"></div></div><button class="x" id="drX">&times;</button></div><div class="db" id="drB"></div></div>
+
+<script>
+(function(){
+  "use strict";
+  var KEY="aos_overlap_tool_v1";
+  var DOMAINS=[{id:"lead",name:"Leadership"},{id:"sales",name:"Sales & BD"},{id:"est",name:"Estimating & Precon"},{id:"pm",name:"Project Delivery"},{id:"field",name:"Field & Production"},{id:"shop",name:"Shop & Logistics"},{id:"fin",name:"Finance & Admin"},{id:"ops",name:"Operations & Systems"}];
+  var PEOPLE=[
+    {name:"Ken Grassano",seats:["Visionary","Integrator","Sales & Estimating","Finance & Administration"],metrics:1,d:["lead","sales","est","fin","ops"]},
+    {name:"Paul Micali",seats:["Visionary","Integrator","Sales & Estimating","Finance & Administration"],metrics:0,d:["lead","sales","est","fin","ops"]},
+    {name:"Marty Worsley",seats:["Director of Construction / Business Development","Operations"],metrics:8,d:["sales","est","ops","field"]},
+    {name:"Nancy Treffeisen",seats:["Operations Manager"],metrics:1,d:["ops","fin"]},
+    {name:"Anthony Lacalamita",seats:["Senior Superintendent"],metrics:0,d:["field"]},
+    {name:"Gino Latona",seats:["Senior Superintendent"],metrics:0,d:["field"]},
+    {name:"Muhammed Hamza",seats:["Draftsman / Estimator"],metrics:0,d:["est"]},
+    {name:"Joe Liabach",seats:["Draftsman / Estimator"],metrics:0,d:["est"]},
+    {name:"Luis Tavarez",seats:["Draftsman / Estimator"],metrics:0,d:["est"]},
+    {name:"Thomas Mahoney",seats:["Project Manager"],metrics:0,d:["pm","field"]},
+    {name:"Jason Tejero",seats:["Project Manager"],metrics:0,d:["pm","field"]},
+    {name:"Richard Bopp",seats:["Shop Foreman"],metrics:0,d:["shop","field"]}
+  ];
+  var domPeople={}; DOMAINS.forEach(function(dm){domPeople[dm.id]=PEOPLE.filter(function(p){return p.d.indexOf(dm.id)>=0;});});
+  function domName(id){for(var i=0;i<DOMAINS.length;i++)if(DOMAINS[i].id===id)return DOMAINS[i].name;return id;}
+  function person(n){return PEOPLE.filter(function(p){return p.name===n;})[0];}
+  var DCOL={lead:"#6E5BA6",sales:"#2F8FA6",est:"#B5794A",pm:"#A38ACF",field:"#2FA98C",shop:"#C69A3C",fin:"#B5432E",ops:"#4E7C8C"};
+  function pLoad(p){return p.d.length;} var maxLoad=Math.max.apply(null,PEOPLE.map(pLoad));
+  function heat(n){return n>=6?"#B5432E":n>=4?"#F76A16":n>=3?"#C69A3C":"#2FA98C";}
+
+  var FINDINGS=[
+    {id:"f1",sev:"crit",title:"One person is the business",
+      ev:[["Seats","2"],["Domains","4"],["Scorecard metrics","8 / 10"]],
+      why:"Marty Worsley sits in two full seats and owns eight of ten scorecard numbers. Sales, field, and profitability all resolve to a single name — so there's no independent read on the business, and he's the bottleneck behind every \"still in progress.\"",
+      persons:["Marty Worsley"],domains:["field","ops","sales","est"],
+      moves:[
+        {t:"Split his two seats — keep him in the execution seat (Operations / project executive), move the Director/BD accountabilities to a distinct owner.",w:"7/10"},
+        {t:"Redistribute the scorecard: bids & hit-rate → Sales seat; schedule, rework, production → Sr. Supers / Ops Manager; profitability → PM seats.",w:"wk 7/14"},
+        {t:"This IS your 3-yr target — \"Operations Manager fully owns field execution, manpower, and production accountability.\"",w:"3-yr"}
+      ]},
+    {id:"f2",sev:"crit",title:"Ownership runs as one block",
+      ev:[["Shared seats","4"],["Domains touched","5"]],
+      why:"Ken & Paul are co-listed as a pair on four seats — Visionary, Integrator, Sales & Estimating, Finance & Admin. Every decision routes to \"the two of them,\" no seat below has a single owner, and the team reads it as no path up. Your own Rock already says to move decisions out of their hands.",
+      persons:["Ken Grassano","Paul Micali"],domains:["lead","fin","ops","sales"],
+      moves:[
+        {t:"Split into distinct CEO / COO — one owns Visionary + Sales/BD (outward), the other Integrator + Finance/Ops (inward).",w:"7/10"},
+        {t:"Assign a single named owner to each of the four shared seats.",w:"7/10"},
+        {t:"Hand Finance & Admin to the Operations Manager + Apparatus, per your 1-yr finance-controls goal.",w:"wk 7/14"}
+      ]},
+    {id:"f3",sev:"warn",title:"Estimating is crowded and undifferentiated",
+      ev:[["People in domain","6"],["Identical seats","3"]],
+      why:"Six people touch Estimating & Precon — three Draftsman/Estimator seats with identical accountabilities, plus Marty, Sales & Estimating, and the owners. Nobody owns the estimating number, so hit-rate and estimate quality have no home.",
+      persons:["Muhammed Hamza","Joe Liabach","Luis Tavarez","Marty Worsley"],domains:["est"],
+      moves:[
+        {t:"Differentiate the three estimators (by project type, size, or region) so each owns a distinct book.",w:"7/10"},
+        {t:"Name one estimating lead who owns bid hit-rate and estimate accuracy on the scorecard.",w:"wk 7/14"},
+        {t:"Stand up documented production-rate estimating (your 1-yr goal) so pricing isn't gut-feel.",w:"ongoing"}
+      ]},
+    {id:"f4",sev:"gap",title:"Field production has six hands, no owner",
+      ev:[["People in domain","6"],["Single owner","0"]],
+      why:"Two Sr. Supers, two PMs, Marty, and the Shop all operate in Field & Production, but no single seat owns it — and the intended owner, the Operations Manager (Nancy), isn't in the domain yet. Production accountability is diffuse, which is why field Rocks slip.",
+      persons:["Nancy Treffeisen","Anthony Lacalamita","Gino Latona","Thomas Mahoney","Jason Tejero","Richard Bopp"],domains:["field"],
+      moves:[
+        {t:"Install the Operations Manager as the single owner of field execution; Supers & PMs report their numbers up to that seat.",w:"7/10"},
+        {t:"Complete Nancy's Operations Manager transition — responsibilities, authority, first 90-day priorities (your Rock).",w:"wk 7/14"},
+        {t:"Relaunch the L10 with field metrics owned at the Sr. Super layer, not pooled at the top.",w:"7/17"}
+      ]},
+    {id:"f5",sev:"gap",title:"Financial visibility has no system yet",
+      ev:[["Rock progress","0%"],["Owners in domain","3"]],
+      why:"Finance & Admin sits with the owners plus an external Apparatus hand-off that isn't complete — and both financial-visibility Rocks are at 0%. There's no weekly read on cash, margin, or overhead, so the 1-yr finance goal stalls.",
+      persons:["Nancy Treffeisen","Ken Grassano","Paul Micali"],domains:["fin"],
+      moves:[
+        {t:"Finish the Apparatus bookkeeping hand-off (the stuck Rock milestone).",w:"7/17"},
+        {t:"Make the Operations Manager the single owner of financial coordination and weekly reporting.",w:"wk 7/14"},
+        {t:"Stand up 4 consecutive weeks of scorecard reporting to close the Financial Visibility Rock.",w:"ongoing"}
+      ]}
+  ];
+  function findingsFor(type,key){return FINDINGS.filter(function(f){return type==="person"?f.persons.indexOf(key)>=0:f.domains.indexOf(key)>=0;});}
+
+  var st={moves:{},notes:{}}; try{st=Object.assign(st,JSON.parse(localStorage.getItem(KEY))||{});}catch(e){}
+  st.moves=st.moves||{}; st.notes=st.notes||{};
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(st));}catch(e){}}
+  function mKey(fi,mi){return fi+":"+mi;}
+
+  function esc(s){s=(s==null?"":""+s);return s.replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
+  function hexA(hex,a){if(hex.indexOf("var(")===0)hex="#BF5A2A";var h=hex.replace("#","");if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];return "rgba("+parseInt(h.slice(0,2),16)+","+parseInt(h.slice(2,4),16)+","+parseInt(h.slice(4,6),16)+","+a+")";}
+
+  /* ===== RAIL ===== */
+  function renderRail(){
+    document.getElementById("sConc").textContent=PEOPLE.filter(function(p){return p.metrics>=5;}).length? "8":"0"; // KPIs on one person
+    document.getElementById("sConc").textContent="8";
+    document.getElementById("sHot").textContent=DOMAINS.filter(function(d){return domPeople[d.id].length>=4;}).length;
+    document.getElementById("sGap").textContent=FINDINGS.filter(function(f){return f.sev==="gap";}).length;
+    document.getElementById("toplist").innerHTML=FINDINGS.map(function(f){
+      return '<div class="tl" data-jump="'+f.id+'"><span class="sev '+f.sev+'"></span><div><div class="tt">'+esc(f.title)+'</div><div class="ts">'+esc(f.moves.length)+' moves</div></div></div>';
+    }).join("");
+  }
+
+  /* ===== FINDINGS ===== */
+  function renderFindings(){
+    document.getElementById("findings").innerHTML=FINDINGS.map(function(f,fi){
+      var sevlabel={crit:"Critical",warn:"Overlap",gap:"Gap"}[f.sev];
+      var ev=f.ev.map(function(e){return '<span class="m">'+esc(e[0])+' <b>'+esc(e[1])+'</b></span>';}).join("");
+      var moves=f.moves.map(function(m,mi){var on=st.moves[mKey(fi,mi)];
+        return '<div class="move '+(on?"on":"")+'" data-move="'+fi+'" data-mi="'+mi+'"><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="mt">'+esc(m.t)+'</span><span class="when">'+esc(m.w)+'</span></div>';}).join("");
+      return '<div class="finding '+f.sev+'" id="'+f.id+'"><span class="fsev '+f.sev+'">'+sevlabel+'</span>'+
+        '<h3>'+esc(f.title)+'</h3><div class="ev">'+ev+'</div><p class="why">'+esc(f.why)+'</p>'+
+        '<div class="movelbl">Recommended moves</div>'+moves+'</div>';
+    }).join("");
+  }
+
+  /* ===== PLAN ===== */
+  function renderPlan(){
+    var groups=[["7/10","At the 7/10 session — cut the seats"],["wk 7/14","Week of 7/14 — re-scope"],["7/17","7/17 L10 relaunch"]];
+    var cols=groups.map(function(g){
+      var items=[]; FINDINGS.forEach(function(f){f.moves.forEach(function(m){ if(m.w===g[0]) items.push(m.t); });});
+      return '<div class="pcol"><div class="ch">'+esc(g[1])+'</div>'+items.map(function(i){return '<div class="pi">'+esc(i)+'</div>';}).join("")+'</div>';
+    }).join("");
+    document.getElementById("plan").innerHTML='<div class="ph2"><div class="t">Turn it into moves — the sequence</div><div class="s">The findings above, ordered into your working cadence. Everything else (production-rate estimating, finance reporting) runs ongoing after.</div></div><div class="pcols">'+cols+'</div>';
+  }
+
+  /* ===== DRAWER ===== */
+  function openDrawer(type,key){
+    var K=document.getElementById("drK"),T=document.getElementById("drT"),B=document.getElementById("drB");
+    if(type==="person"){var p=person(key); if(!p)return; K.textContent="Person breakdown"; T.textContent=p.name;
+      var fs=findingsFor("person",key);
+      B.innerHTML='<div class="kv"><b>'+p.seats.length+'</b> seat'+(p.seats.length>1?'s':'')+' · <b>'+p.d.length+'</b> domains'+(p.metrics?' · owns <b style="color:var(--crit)">'+p.metrics+'</b> scorecard metric'+(p.metrics>1?'s':''):'')+'</div>'+
+        '<div class="lbl">Seats held</div><div class="chips">'+p.seats.map(function(s){return '<span class="chip" style="background:var(--accent-soft);color:var(--accent-ink)">'+esc(s)+'</span>';}).join("")+'</div>'+
+        '<div class="lbl">Domains touched</div><div class="chips">'+p.d.map(function(id){return '<span class="chip" style="background:'+hexA(DCOL[id],.16)+';color:'+DCOL[id]+'">'+esc(domName(id))+'</span>';}).join("")+'</div>'+
+        drawerFindings(fs)+drawerNote("person:"+key);
+    } else {
+      var pl=domPeople[key]||[]; K.textContent="Domain breakdown"; T.textContent=domName(key);
+      var fs2=findingsFor("domain",key);
+      B.innerHTML='<div class="kv"><b>'+pl.length+'</b> people plug into this domain'+(pl.length>=5?' — a heavy overlap':pl.length<=1?' — thin coverage':'')+'</div>'+
+        '<div class="lbl">Who\'s in it</div><div class="chips">'+pl.map(function(p){return '<span class="chip" data-drawer="person" data-k="'+esc(p.name)+'" style="background:var(--card);border:1px solid var(--line);color:var(--ink-soft);cursor:pointer">'+esc(p.name)+(p.metrics>=5?' ·'+p.metrics+'KPI':'')+'</span>';}).join("")+'</div>'+
+        drawerFindings(fs2)+drawerNote("domain:"+key);
+    }
+    document.getElementById("scrim").classList.add("on"); document.getElementById("drawer").classList.add("on");
+  }
+  function drawerFindings(fs){ if(!fs.length)return '<div class="lbl">Findings</div><p style="font-size:12.5px;color:var(--muted)">No structural flags on this one.</p>';
+    return '<div class="lbl">Findings &amp; moves involving this</div>'+fs.map(function(f){var top=f.moves[0];
+      return '<div class="fref '+f.sev+'" data-jump="'+f.id+'"><div class="ft">'+esc(f.title)+'</div><div class="fm">'+esc(top.t)+'</div></div>';}).join("");
+  }
+  function drawerNote(k){var v=st.notes[k]||""; return '<div class="lbl">Your note</div><textarea data-note="'+k+'" placeholder="What to do about this…">'+esc(v)+'</textarea>';}
+  function closeDrawer(){document.getElementById("scrim").classList.remove("on");document.getElementById("drawer").classList.remove("on");}
+
+  /* ===== NEURAL (canvas) ===== */
+  var cv=document.getElementById("neuralCanvas"),ctx=cv.getContext("2d"),nodes=[],links=[],DPR=Math.min(2,window.devicePixelRatio||1);
+  var rotY=0.5,rotX=-0.22,dragR=false,dragNode=null,moved=false,fitted=false,lastX=0,lastY=0,zoom=1,autoRot=true,raf=null,hoverNode=null;
+  var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var _s=1; function nseed(){_s=(_s*16807)%2147483647;return ((_s/2147483647)-0.5)*340;}
+  function idx(id){for(var i=0;i<nodes.length;i++)if(nodes[i].id===id)return i;return -1;}
+  function buildGraph(){nodes=[];links=[];
+    PEOPLE.forEach(function(p){nodes.push({id:"p:"+p.name,type:"p",label:p.name,r:6+pLoad(p)*2.2+p.metrics*0.7,ref:p,x:nseed(),y:nseed(),z:nseed(),vx:0,vy:0,vz:0});});
+    DOMAINS.forEach(function(dm){var c=domPeople[dm.id].length;nodes.push({id:"d:"+dm.id,type:"d",label:dm.name,did:dm.id,r:7+c*2.4,c:DCOL[dm.id],x:nseed(),y:nseed(),z:nseed(),vx:0,vy:0,vz:0});});
+    PEOPLE.forEach(function(p){p.d.forEach(function(did){links.push([idx("p:"+p.name),idx("d:"+did),did]);});});}
+  function step(){for(var i=0;i<nodes.length;i++){var a=nodes[i];for(var j=i+1;j<nodes.length;j++){var b=nodes[j];var dx=a.x-b.x,dy=a.y-b.y,dz=a.z-b.z,d2=dx*dx+dy*dy+dz*dz+0.01,d=Math.sqrt(d2),f=5400/d2,ux=dx/d,uy=dy/d,uz=dz/d;a.vx+=ux*f;a.vy+=uy*f;a.vz+=uz*f;b.vx-=ux*f;b.vy-=uy*f;b.vz-=uz*f;}}
+    links.forEach(function(l){var a=nodes[l[0]],b=nodes[l[1]],dx=b.x-a.x,dy=b.y-a.y,dz=b.z-a.z,d=Math.sqrt(dx*dx+dy*dy+dz*dz)+0.01,f=(d-120)*0.011,ux=dx/d,uy=dy/d,uz=dz/d;a.vx+=ux*f;a.vy+=uy*f;a.vz+=uz*f;b.vx-=ux*f;b.vy-=uy*f;b.vz-=uz*f;});
+    for(var k=0;k<nodes.length;k++){var n=nodes[k];n.vx-=n.x*0.0011;n.vy-=n.y*0.0011;n.vz-=n.z*0.0011;n.vx*=0.85;n.vy*=0.85;n.vz*=0.85;n.x+=n.vx;n.y+=n.vy;n.z+=n.vz;}}
+  function project(n){var cy=Math.cos(rotY),sy=Math.sin(rotY),cx=Math.cos(rotX),sx=Math.sin(rotX);var x1=n.x*cy-n.z*sy,z1=n.x*sy+n.z*cy,y1=n.y*cx-z1*sx,z2=n.y*sx+z1*cx,persp=420/(420+z2)*zoom;return {sx:x1*persp,sy:y1*persp,s:persp,z:z2};}
+  function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
+  function ambient(W,H){ctx.save();ctx.fillStyle="rgba(247,106,22,.05)";for(var x=20;x<W;x+=30){for(var y=20;y<H;y+=30){ctx.beginPath();ctx.arc(x,y,1,0,7);ctx.fill();}}ctx.restore();}
+  function fit(W,H){var maxR=0;nodes.forEach(function(n){var d=Math.sqrt(n.x*n.x+n.y*n.y+n.z*n.z);if(d>maxR)maxR=d;});zoom=Math.max(0.5,Math.min(1.6,(0.34*Math.min(W,H))/(maxR||1)));}
+  function draw(){var W=cv.clientWidth,H=cv.clientHeight;if(cv.width!==W*DPR){cv.width=W*DPR;cv.height=H*DPR;}ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,W,H);
+    if(!fitted&&W>0){fit(W,H);fitted=true;} var cxp=W/2,cyp=H/2; ambient(W,H);
+    var pr=nodes.map(function(n){return {n:n,p:project(n)};});var hi=hoverNode||dragNode;var nb={};if(hi){links.forEach(function(l){if(nodes[l[0]]===hi)nb[l[1]]=1;if(nodes[l[1]]===hi)nb[l[0]]=1;});}
+    links.forEach(function(l){var a=pr[l[0]],b=pr[l[1]],on=hi?(nodes[l[0]]===hi||nodes[l[1]]===hi):true;ctx.strokeStyle=hexA(DCOL[l[2]],on?(hi?0.7:0.32):0.06);ctx.lineWidth=(on&&hi?1.9:0.9)*a.p.s;ctx.beginPath();ctx.moveTo(cxp+a.p.sx,cyp+a.p.sy);ctx.lineTo(cxp+b.p.sx,cyp+b.p.sy);ctx.stroke();});
+    pr.sort(function(a,b){return a.p.z-b.p.z;});
+    pr.forEach(function(o){var n=o.n,p=o.p,on=!hi||n===hi||nb[idx(n.id)],R=n.r*p.s*0.52,col=n.type==="p"?heat(pLoad(n.ref)+(n.ref.metrics>=5?2:0)):(n.c||"#999");
+      ctx.globalAlpha=on?1:0.16;var g=ctx.createRadialGradient(cxp+p.sx,cyp+p.sy,0,cxp+p.sx,cyp+p.sy,R*2.7);g.addColorStop(0,hexA(col,.55));g.addColorStop(1,hexA(col,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(cxp+p.sx,cyp+p.sy,R*2.7,0,7);ctx.fill();
+      ctx.fillStyle=col;ctx.beginPath();ctx.arc(cxp+p.sx,cyp+p.sy,R,0,7);ctx.fill();ctx.strokeStyle=n.type==="d"?"rgba(255,255,255,.55)":"rgba(255,236,214,.66)";ctx.lineWidth=n.type==="d"?1.4:1;ctx.stroke();
+      o._sx=cxp+p.sx;o._sy=cyp+p.sy;o._R=Math.max(R,8);});
+    pr.forEach(function(o){var n=o.n,p=o.p,on=!hi||n===hi||nb[idx(n.id)];
+      if(on&&(p.s>0.92||n===hi||(n.type==="p"&&pLoad(n.ref)>=4)||n.type==="d")){var fs=Math.max(10.5,Math.min(14.5,11*p.s));ctx.font=(n===hi||n.type==="d"?"600 ":"400 ")+fs+'px "Helvetica Neue",Helvetica,Arial,sans-serif';var tw=ctx.measureText(n.label).width,lx=Math.max(tw/2+8,Math.min(W-tw/2-8,cxp+p.sx)),ly=cyp+p.sy+o._R+Math.min(16,13*p.s);
+        ctx.globalAlpha=on?1:0.4;ctx.fillStyle="rgba(20,15,10,.62)";rr(ctx,lx-tw/2-6,ly-fs+1,tw+12,fs+5,5);ctx.fill();
+        ctx.fillStyle=n.type==="d"?"#F7ECD8":"#F5EDDE";ctx.textAlign="center";ctx.textBaseline="alphabetic";ctx.fillText(n.label,lx,ly);}});
+    ctx.globalAlpha=1;cv._pr=pr;}
+  function loop(){if(!reduce&&autoRot&&!dragNode&&!dragR)rotY+=0.0014;draw();raf=requestAnimationFrame(loop);}
+  function settle(){for(var i=0;i<340;i++)step();}
+  cv.addEventListener("mousedown",function(e){var r=cv.getBoundingClientRect();var n=pick(e.clientX-r.left,e.clientY-r.top);moved=false;autoRot=false;lastX=e.clientX;lastY=e.clientY;if(n){dragNode=n;}else{dragR=true;}});
+  window.addEventListener("mouseup",function(){dragR=false;dragNode=null;});
+  window.addEventListener("mousemove",function(e){
+    if(dragNode){var dx=e.clientX-lastX,dy=e.clientY-lastY;if(dx||dy)moved=true;var s=(project(dragNode).s*zoom)||1,cy=Math.cos(rotY),sy=Math.sin(rotY),cx=Math.cos(rotX),sx=Math.sin(rotX);dragNode.x+=(dx*cy-dy*sx*sy)/s;dragNode.y+=(dy*cx)/s;dragNode.z+=(-dx*sy-dy*sx*cy)/s;lastX=e.clientX;lastY=e.clientY;return;}
+    if(dragR){var ax=e.clientX-lastX,ay=e.clientY-lastY;if(ax||ay)moved=true;rotY+=ax*0.008;rotX+=ay*0.008;rotX=Math.max(-1.4,Math.min(1.4,rotX));lastX=e.clientX;lastY=e.clientY;return;}
+    if(view!=="neural")return;var r=cv.getBoundingClientRect();hoverNode=pick(e.clientX-r.left,e.clientY-r.top);var tip=document.getElementById("tip");
+    if(hoverNode){var o=cv._pr.filter(function(z){return z.n===hoverNode;})[0];tip.style.opacity=1;tip.style.left=Math.min(r.width-240,o._sx+12)+"px";tip.style.top=(o._sy+12)+"px";if(hoverNode.type==="p"){tip.innerHTML='<b>'+esc(hoverNode.label)+'</b><span class="dm">'+hoverNode.ref.seats.length+' seats · '+pLoad(hoverNode.ref)+' domains'+(hoverNode.ref.metrics?' · '+hoverNode.ref.metrics+' KPI':'')+'</span>';}else{tip.innerHTML='<b>'+esc(hoverNode.label)+'</b><span class="dm">'+domPeople[hoverNode.did].length+' people share this</span>';}cv.style.cursor="grab";}else{tip.style.opacity=0;cv.style.cursor="grab";}});
+  cv.addEventListener("click",function(e){if(moved){moved=false;return;}var r=cv.getBoundingClientRect();var n=pick(e.clientX-r.left,e.clientY-r.top);if(n)openDrawer(n.type==="p"?"person":"domain",n.type==="p"?n.ref.name:n.did);});
+  cv.addEventListener("wheel",function(e){e.preventDefault();zoom*=e.deltaY>0?0.92:1.08;zoom=Math.max(0.4,Math.min(3,zoom));},{passive:false});
+  function pick(mx,my){if(!cv._pr)return null;var best=null,bd=1e9;cv._pr.forEach(function(o){var dx=mx-o._sx,dy=my-o._sy,d=dx*dx+dy*dy;if(d<Math.max(o._R*o._R,150)&&d<bd){bd=d;best=o.n;}});return best;}
+
+  /* ===== MATRIX ===== */
+  function renderMatrix(){
+    var host=document.getElementById("svgHost"),doms=DOMAINS;
+    var html='<div style="padding:16px 18px"><table style="border-collapse:collapse;width:100%;font-family:var(--sans)"><tr><th style="text-align:left;padding:6px 8px"></th>';
+    doms.forEach(function(d){var c=domPeople[d.id].length;html+='<th data-drawer="domain" data-k="'+d.id+'" style="cursor:pointer;padding:6px 4px;vertical-align:bottom"><div style="writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;margin:0 auto 5px;font-size:10.5px;color:var(--ink-soft);font-weight:700">'+esc(d.name)+'</div><div style="font-family:var(--mono);font-size:11px;font-weight:700;color:'+(c>=5?'var(--crit)':c>=3?'var(--warn)':'var(--muted)')+'">'+c+'</div></th>';});
+    html+='<th style="font-size:10.5px;color:var(--muted);padding:0 6px">KPIs</th></tr>';
+    PEOPLE.slice().sort(function(a,b){return pLoad(b)-pLoad(a);}).forEach(function(p){
+      html+='<tr><td data-drawer="person" data-k="'+esc(p.name)+'" style="cursor:pointer;padding:5px 8px;font-size:12.5px;font-weight:600;white-space:nowrap;border-top:1px solid var(--line-soft)">'+esc(p.name)+'</td>';
+      doms.forEach(function(d){var on=p.d.indexOf(d.id)>=0,c=domPeople[d.id].length,col=on?hexA(DCOL[d.id],c>=5?0.9:c>=3?0.6:0.32):"transparent";html+='<td data-drawer="domain" data-k="'+d.id+'" style="cursor:pointer;border-top:1px solid var(--line-soft);text-align:center;padding:5px 4px"><span style="display:inline-block;width:18px;height:18px;border-radius:5px;background:'+col+'"></span></td>';});
+      html+='<td style="text-align:center;border-top:1px solid var(--line-soft);font-family:var(--mono);font-size:12px;font-weight:700;color:'+(p.metrics>=5?'var(--crit)':'var(--muted)')+'">'+(p.metrics||"·")+'</td></tr>';});
+    html+='</table></div>';host.innerHTML=html;
+  }
+
+  function renderLegend(){var el=document.getElementById("legend");
+    if(view==="neural"){el.innerHTML='<span class="lk"><span class="sw dot" style="background:var(--crit)"></span>Overloaded (4+ domains)</span><span class="lk"><span class="sw dot" style="background:var(--good)"></span>Focused</span>'+DOMAINS.map(function(d){return '<span class="lk"><span class="sw" style="background:'+DCOL[d.id]+'"></span>'+esc(d.name)+'</span>';}).join("");}
+    else{el.innerHTML='<span class="lk">Filled cell = person owns work in that domain · deeper column = heavier overlap · bold count (5+) is a hotspot · empty column with no owner is a gap · KPI column = scorecard concentration.</span>';}}
+
+  var view="neural";
+  function setView(v){view=v;document.querySelectorAll(".switch button").forEach(function(b){b.classList.toggle("on",b.dataset.view===v);});
+    var box=document.getElementById("stageBox"),svg=document.getElementById("svgHost"),can=document.getElementById("neuralCanvas"),hint=document.getElementById("hint");
+    if(v==="neural"){box.classList.add("dark");can.classList.remove("hidev");svg.classList.add("hidev");hint.style.display="";if(!raf)loop();}
+    else{box.classList.remove("dark");can.classList.add("hidev");svg.classList.remove("hidev");hint.style.display="none";if(raf){cancelAnimationFrame(raf);raf=null;}renderMatrix();}
+    renderLegend();}
+
+  /* ===== events ===== */
+  document.addEventListener("click",function(e){
+    var sw=e.target.closest(".switch button"); if(sw){setView(sw.dataset.view);return;}
+    var dr=e.target.closest("[data-drawer]"); if(dr){openDrawer(dr.dataset.drawer,dr.dataset.k);return;}
+    var jump=e.target.closest("[data-jump]"); if(jump){closeDrawer();var el=document.getElementById(jump.dataset.jump);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.style.transition="box-shadow .3s";el.style.boxShadow="0 0 0 3px var(--accent-soft), var(--shadow)";setTimeout(function(){el.style.boxShadow="";},1400);}return;}
+    var mv=e.target.closest(".move"); if(mv){var k=mKey(+mv.dataset.move,+mv.dataset.mi);st.moves[k]=!st.moves[k];save();renderFindings();return;}
+    if(e.target.id==="drX"||e.target.id==="scrim"){closeDrawer();return;}
+  });
+  document.addEventListener("input",function(e){if(e.target.matches("[data-note]")){st.notes[e.target.dataset.note]=e.target.value;save();}});
+  document.addEventListener("keydown",function(e){if(e.key==="Escape")closeDrawer();});
+
+  /* init */
+  buildGraph();settle();renderRail();renderFindings();renderPlan();
+  var initV=(location.hash||"").replace("#","");setView(initV==="matrix"?"matrix":"neural");
+})();
+</script>
+</body>
+</html>
